@@ -35,4 +35,5 @@ app.post("/create-checkout-session", async (req, res) => {
   }
 });
 
-app.listen(4242, () => console.log("Servidor en http://localhost:4242"));
+const PORT = process.env.PORT || 4242; // 4242 solo si lo ejecutas localmente
+app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
