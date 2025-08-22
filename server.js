@@ -44,8 +44,8 @@ app.post("/create-checkout-session", async (req, res) => {
           quantity: 1,
         },
       ],
-      success_url: "https://powerhub.page/tienda-frontend/success.html", // Actualizado también aquí
-      cancel_url: "https://powerhub.page/tienda-frontend/index.html",
+      success_url: "https://powerhub.page/success.html", // Actualizado también aquí
+      cancel_url: "https://powerhub.page/index.html",
     });
 
     res.json({ id: session.id });
