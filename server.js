@@ -45,3 +45,7 @@ app.post("/create-checkout-session", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+const PORT = process.env.PORT || 4242;
+app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
