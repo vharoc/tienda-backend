@@ -6,7 +6,12 @@ const cors = require("cors");
 const app = express();
 
 // ---------- CORS ----------
-app.use(cors({ origin: "https://powerhub.page" })); // Cambiado a tu frontend actual
+app.use(cors({
+  origin: "https://powerhub.page",
+  methods: ["GET","POST","OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+}));
+
 app.use(express.json());
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
