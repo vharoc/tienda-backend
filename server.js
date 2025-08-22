@@ -4,11 +4,14 @@ const Stripe = require("stripe");
 const cors = require("cors");
 
 const app = express();
-app.use(cors({ origin: "https://vharoc.github.io" })); // tu frontend
+
+// ---------- CORS ----------
+app.use(cors({ origin: "https://powerhub.page" })); // Cambiado a tu frontend actual
 app.use(express.json());
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// ---------- CREAR SESIÓN DE CHECKOUT ----------
 app.post("/create-checkout-session", async (req, res) => {
   try {
     const cantidad = parseInt(req.body.cantidad) || 1;
@@ -36,8 +39,8 @@ app.post("/create-checkout-session", async (req, res) => {
           quantity: 1,
         },
       ],
-      success_url: "https://vharoc.github.io/tienda/success.html",
-      cancel_url: "https://vharoc.github.io/tienda/index.html",
+      success_url: "https://powerhub.page/tienda/success.html", // Actualizado también aquí
+      cancel_url: "https://powerhub.page/tienda/index.html",
     });
 
     res.json({ id: session.id });
@@ -46,6 +49,6 @@ app.post("/create-checkout-session", async (req, res) => {
   }
 });
 
-
+// ---------- INICIAR SERVIDOR ----------
 const PORT = process.env.PORT || 4242;
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
