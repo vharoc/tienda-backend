@@ -5,33 +5,27 @@ const cors = require("cors");
 const nodemailer = require("nodemailer");
 
 const app = express();
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// ---------- CORS ----------
+// ---------- CORS para tus rutas normales ----------
 app.use(cors({
   origin: "https://powerhub.page",
   methods: ["GET","POST","OPTIONS"],
   allowedHeaders: ["Content-Type"],
 }));
 
-
-/**
- * ---------- CONFIGURACIÓN DE NODemailer ----------
- */
+// ---------- CONFIGURACIÓN NODemailer ----------
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT),
-  secure: true, // Gmail usa 465 con secure
+  secure: true, 
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
 });
 
-
-/**
- * ---------- WEBHOOK DE STRIPE ----------
- * IMPORTANTE: esta ruta usa express.raw()
- */
+// ---------- WEBHOOK DE STRIPE ----------
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
@@ -49,16 +43,11 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     const session = event.data.object;
 
     try {
-      // Opcional: obtener line_items para más detalles
-      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 });
-
       await transporter.sendMail({
         from: process.env.NOTIFY_FROM,
         to: process.env.NOTIFY_TO,
         subject: "💸 Nuevo pago completado en PowerHub",
-        text: `Se completó un pago por ${session.amount_total / 100} EUR.\n
-               Cliente: ${session.customer_details.email}\n
-               Session ID: ${session.id}`,
+        text: `Se completó un pago por ${session.amount_total / 100} EUR.\nCliente: ${session.customer_details.email}\nSession ID: ${session.id}`,
       });
 
       console.log("✅ Correo enviado correctamente.");
@@ -70,41 +59,24 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
   res.json({ received: true });
 });
 
-
 // ---------- BODY PARSER JSON PARA EL RESTO ----------
 app.use(express.json());
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // ---------- CREAR SESIÓN DE CHECKOUT ----------
 app.post("/create-checkout-session", async (req, res) => {
   try {
     const cantidad = parseInt(req.body.cantidad) || 1;
-    const precioUnitario = 2000; // 20 € en céntimos
-    const gastosEnvio = 400; // 4 € en céntimos
+    const precioUnitario = 2000;
+    const gastosEnvio = 400;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
       line_items: [
-        {
-          price_data: {
-            currency: "eur",
-            product_data: { name: "Producto de ejemplo" },
-            unit_amount: precioUnitario,
-          },
-          quantity: cantidad,
-        },
-        {
-          price_data: {
-            currency: "eur",
-            product_data: { name: "Gastos de envío" },
-            unit_amount: gastosEnvio,
-          },
-          quantity: 1,
-        },
+        { price_data: { currency: "eur", product_data: { name: "Producto de ejemplo" }, unit_amount: precioUnitario }, quantity: cantidad },
+        { price_data: { currency: "eur", product_data: { name: "Gastos de envío" }, unit_amount: gastosEnvio }, quantity: 1 },
       ],
-      success_url: "https://powerhub.page/success.html", // Actualizado también aquí
+      success_url: "https://powerhub.page/success.html",
       cancel_url: "https://powerhub.page",
     });
 
