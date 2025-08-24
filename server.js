@@ -36,20 +36,44 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
   switch (event.type) {
     case "checkout.session.completed":
       const session = event.data.object;
-      console.log("✅ Pago completado. Enviando correo...");
-    
+
+      // Rescatamos los datos del cliente de la metadata y los detalles de la sesión
+      const datosEnvio = session.metadata;
+      const emailCliente = session.customer_details ? session.customer_details.email : 'No disponible';
+      const monto = (session.amount_total / 100).toFixed(2);
+      
+      console.log("✅ Pago completado. Enviando correo de notificación...");
+
+      // Preparamos el contenido del correo con los datos
+      const emailText = `
+        ¡Nuevo pedido completado en PowerHub!
+
+        --- Detalles del Pago ---
+        Monto: ${monto} EUR
+        Cliente: ${emailCliente}
+        Session ID: ${session.id}
+
+        --- Información de Envío ---
+        Nombre: ${datosEnvio.nombre || 'No proporcionado'}
+        Teléfono: ${datosEnvio.telefono || 'No proporcionado'}
+        Dirección: ${datosEnvio.direccion || 'No proporcionada'}
+        Provincia: ${datosEnvio.provincia || 'No proporcionada'}
+        Ciudad: ${datosEnvio.ciudad || 'No proporcionada'}
+        Código Postal: ${datosEnvio.codigoPostal || 'No proporcionado'}
+      `;
+
       try {
         await transporter.sendMail({
           from: process.env.NOTIFY_FROM,
           to: process.env.NOTIFY_TO,
-          subject: "💸 Nuevo pago completado en PowerHub",
-          text: `Se completó un pago por ${session.amount_total / 100} EUR.\nCliente: ${session.customer_details.email}\nSession ID: ${session.id}`,
+          subject: "💸 Nuevo pedido completado en PowerHub",
+          text: emailText,
         });
         console.log("✅ Correo enviado correctamente.");
-        
       } catch (e) {
-          console.error("❌ Error al enviar correo:", e);
+        console.error("❌ Error al enviar correo:", e);
       }
+      
       break;
     // Puedes manejar otros eventos aquí si es necesario
       default:
@@ -72,7 +96,7 @@ app.use(cors({
 // ---------- CREAR SESIÓN DE CHECKOUT ----------
 app.post("/create-checkout-session", async (req, res) => {
   try {
-    const cantidad = parseInt(req.body.cantidad) || 1;
+    const { cantidad, nombre, telefono, direccion, provincia, ciudad, codigoPostal } = req.body;
     const precioUnitario = 2000;
     const gastosEnvio = 400;
 
@@ -83,6 +107,21 @@ app.post("/create-checkout-session", async (req, res) => {
         { price_data: { currency: "eur", product_data: { name: "Producto de ejemplo" }, unit_amount: precioUnitario }, quantity: cantidad },
         { price_data: { currency: "eur", product_data: { name: "Gastos de envío" }, unit_amount: gastosEnvio }, quantity: 1 },
       ],
+
+      // Capturar informacion del cliente
+      //shipping_address_collection: {
+        //allowed_countries: ['ES'], // Solo permitir España
+      //},
+
+      metadata: {
+        nombre: nombre,
+        telefono: telefono,
+        direccion: direccion,
+        provincia: provincia,
+        ciudad: ciudad,
+        codigoPostal: codigoPostal
+      },
+
       success_url: "https://powerhub.page/success.html",
       cancel_url: "https://powerhub.page",
     });
