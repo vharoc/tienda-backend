@@ -7,13 +7,6 @@ const nodemailer = require("nodemailer");
 const app = express();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// ---------- CORS para tus rutas normales ----------
-app.use(cors({
-  origin: "https://powerhub.page",
-  methods: ["GET","POST","OPTIONS"],
-  allowedHeaders: ["Content-Type"],
-}));
-
 // ---------- CONFIGURACIÓN NODemailer ----------
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -39,28 +32,42 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-
-    try {
-      await transporter.sendMail({
-        from: process.env.NOTIFY_FROM,
-        to: process.env.NOTIFY_TO,
-        subject: "💸 Nuevo pago completado en PowerHub",
-        text: `Se completó un pago por ${session.amount_total / 100} EUR.\nCliente: ${session.customer_details.email}\nSession ID: ${session.id}`,
-      });
-
-      console.log("✅ Correo enviado correctamente.");
-    } catch (e) {
-      console.error("❌ Error al enviar correo:", e);
+  // Manejar los eventos
+  switch (event.type) {
+    case "checkout.session.completed":
+      const session = event.data.object;
+      console.log("✅ Pago completado. Enviando correo...");
+    
+      try {
+        await transporter.sendMail({
+          from: process.env.NOTIFY_FROM,
+          to: process.env.NOTIFY_TO,
+          subject: "💸 Nuevo pago completado en PowerHub",
+          text: `Se completó un pago por ${session.amount_total / 100} EUR.\nCliente: ${session.customer_details.email}\nSession ID: ${session.id}`,
+        });
+        console.log("✅ Correo enviado correctamente.");
+        
+      } catch (e) {
+          console.error("❌ Error al enviar correo:", e);
+      }
+      break;
+    // Puedes manejar otros eventos aquí si es necesario
+      default:
+        console.log(`Evento no manejado: ${event.type}`);
     }
-  }
 
   res.json({ received: true });
 });
 
 // ---------- BODY PARSER JSON PARA EL RESTO ----------
 app.use(express.json());
+
+// ---------- CORS para tus rutas normales ----------
+app.use(cors({
+  origin: "https://powerhub.page",
+  methods: ["GET","POST","OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+}));
 
 // ---------- CREAR SESIÓN DE CHECKOUT ----------
 app.post("/create-checkout-session", async (req, res) => {
