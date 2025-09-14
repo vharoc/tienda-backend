@@ -97,8 +97,8 @@ app.use(cors({
 app.post("/create-checkout-session", async (req, res) => {
   try {
     const { cantidad, nombre, telefono, direccion, provincia, ciudad, codigoPostal } = req.body;
-    const precioUnitario = 2000;
-    const gastosEnvio = 400;
+    const precioUnitario = 999;
+    const gastosEnvio = 395;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
